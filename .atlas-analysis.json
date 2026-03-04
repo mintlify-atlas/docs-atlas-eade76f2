@@ -1,0 +1,86 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Bool CLI",
+  "projectDescription": "Command-line tool for managing projects on bool.com - deploy, version, and share code instantly.",
+  "theme": "palm",
+  "primaryColor": "#4F46E5",
+  "lightColor": "#818CF8",
+  "darkColor": "#3730A3",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "introduction",
+          "installation",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Commands",
+        "pages": [
+          "commands/overview",
+          "commands/auth",
+          "commands/shipit",
+          "commands/bools",
+          "commands/versions",
+          "commands/skill"
+        ]
+      },
+      {
+        "group": "Guides",
+        "pages": [
+          "guides/configuration",
+          "guides/deployment",
+          "guides/boolignore",
+          "guides/json-output"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/environment-variables",
+          "reference/project-config",
+          "reference/troubleshooting"
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "One-command deployment with shipit",
+    "Version control for web projects",
+    "Anonymous deployment without authentication",
+    "Project-level configuration tracking",
+    "JSON output for automation",
+    "Agent skill installation"
+  ],
+  "publicApiSurface": [
+    "bool auth login",
+    "bool auth status",
+    "bool shipit [directory]",
+    "bool list",
+    "bool create <name>",
+    "bool show [slug]",
+    "bool update [slug]",
+    "bool delete [slug]",
+    "bool open [slug]",
+    "bool versions [slug]",
+    "bool deploy [slug] [dir]",
+    "bool pull [slug] [dir]",
+    "bool skill [directory]",
+    "--json flag",
+    "--limit flag",
+    "--message/-m flag",
+    "--exclude flag",
+    "--version flag",
+    "--name flag",
+    "--description flag",
+    "--visibility flag",
+    "--slug flag",
+    "--base-url flag",
+    "--output flag",
+    "--no-upload flag",
+    "--all-files flag",
+    "--yes/-y flag"
+  ]
+}
