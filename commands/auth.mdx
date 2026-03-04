@@ -1,0 +1,157 @@
+---
+title: "Authentication Commands"
+description: "Manage API authentication and check connection status"
+---
+
+The `bool auth` commands manage your Bool.com API credentials.
+
+## bool auth login
+
+Save your API key to the local config file.
+
+```bash
+bool auth login
+```
+
+You'll be prompted to enter your API key:
+
+```
+Enter your bool.com API key: 
+✔ API key saved to ~/.config/bool-cli/config.json
+```
+
+### How It Works
+
+1. Prompts for your API key (input is hidden)
+2. Validates the key is non-empty
+3. Saves to `~/.config/bool-cli/config.json`
+4. Creates the config directory if it doesn't exist
+
+### Getting Your API Key
+
+Get your API key from [bool.com/settings/api](https://bool.com/settings/api).
+
+### Config File Location
+
+The API key is stored in:
+```
+~/.config/bool-cli/config.json
+```
+
+Example config file:
+```json
+{
+  "apiKey": "bool_abc123xyz..."
+}
+```
+
+### Environment Variable Override
+
+You can also set the API key via environment variable:
+
+```bash
+export BOOL_API_KEY="bool_abc123xyz..."
+```
+
+The environment variable takes precedence over the config file.
+
+## bool auth status
+
+Check authentication status and verify API connectivity.
+
+```bash
+bool auth status
+```
+
+### Success Output
+
+```
+API key: bool_abc…xyz4
+✔ API is reachable and healthy.
+```
+
+### Not Authenticated
+
+```
+✖ No API key configured. Run: bool auth login
+```
+
+### API Health Check Failed
+
+```
+API key: bool_abc…xyz4
+✖ API health check failed: Connection timeout
+```
+
+### How It Works
+
+1. Checks for API key in environment or config file
+2. Displays masked key (first 8 and last 4 characters visible)
+3. Makes a health check request to the API
+4. Reports API status
+
+### Exit Codes
+
+- `0` - Authentication valid and API healthy
+- `1` - No API key found or API health check failed
+
+## Authentication Flow
+
+Most Bool CLI commands require authentication:
+
+```bash
+# 1. Save your API key
+bool auth login
+
+# 2. Verify it works
+bool auth status
+
+# 3. Use authenticated commands
+bool list
+bool create my-site
+bool deploy
+```
+
+## Anonymous Commands
+
+Some commands work without authentication:
+
+- `bool shipit` - Creates anonymous Bools with update secrets
+
+See [shipit documentation](/commands/shipit) for details.
+
+## Troubleshooting
+
+### "No API key configured" Error
+
+**Solution**: Run `bool auth login` and enter your API key.
+
+### API Health Check Fails
+
+**Possible causes**:
+- Network connectivity issues
+- API is down (check [status.bool.com](https://status.bool.com))
+- Firewall blocking requests
+- Invalid API key
+
+**Solution**: Check your internet connection and verify your API key at [bool.com/settings/api](https://bool.com/settings/api).
+
+### Custom API URL
+
+For development or self-hosted instances:
+
+```bash
+export BOOL_API_URL="https://api.example.com"
+bool auth status
+```
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Quick Deploy" icon="rocket" href="/commands/shipit">
+    Deploy without authentication using shipit
+  </Card>
+  <Card title="Bool Management" icon="layer-group" href="/commands/bools">
+    Create and manage your Bools
+  </Card>
+</CardGroup>

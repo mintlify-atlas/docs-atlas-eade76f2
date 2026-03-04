@@ -1,0 +1,134 @@
+---
+title: "Command Overview"
+description: "Overview of all Bool CLI commands, common patterns, and command categories"
+---
+
+The Bool CLI provides commands for authentication, deploying static sites, and managing your Bools.
+
+## All Commands
+
+### Authentication
+
+- `bool auth login` - Save your API key to `~/.config/bool-cli/config.json`
+- `bool auth status` - Check authentication status and API health
+
+### Quick Deploy
+
+- `bool shipit [directory]` - Create and deploy an anonymous Bool in one step
+
+### Bool Management
+
+- `bool list` - List your Bools
+- `bool create <name>` - Create a new Bool
+- `bool show [slug]` - Show Bool details and latest version
+- `bool update [slug]` - Update Bool properties (name, description, visibility)
+- `bool delete [slug]` - Delete a Bool
+- `bool open [slug]` - Open Bool in browser
+
+### Version & Deployment
+
+- `bool versions [slug]` - List version history
+- `bool deploy [slug] [dir]` - Deploy local files as a new version (with authentication)
+- `bool pull [slug] [dir]` - Download files from a Bool
+
+### Agent Integration
+
+- `bool skill [directory]` - Install the Bool CLI agent skill into your project
+
+## Common Patterns
+
+### Slug Resolution
+
+Many commands accept an optional `[slug]` argument. If you omit the slug, the CLI automatically reads it from `.bool/config` in your current directory:
+
+```bash
+# Explicit slug
+bool show my-site
+
+# Auto-resolve from .bool/config
+cd my-project
+bool show
+```
+
+Commands that support slug resolution:
+- `bool show`
+- `bool update`
+- `bool delete`
+- `bool open`
+- `bool versions`
+- `bool deploy`
+- `bool pull`
+
+### JSON Output
+
+Most commands support a `--json` flag for machine-readable output:
+
+```bash
+bool list --json
+bool show my-site --json
+bool versions my-site --json
+```
+
+### Project Configuration
+
+The CLI stores project-specific metadata in `.bool/config`:
+
+```json
+{
+  "slug": "my-site-abc123",
+  "name": "My Site",
+  "secret": "update_secret_xyz" // For anonymous Bools only
+}
+```
+
+This file is automatically created and updated by:
+- `bool shipit`
+- `bool deploy`
+- `bool create`
+- `bool show`
+- `bool pull`
+
+### Environment Variables
+
+- `BOOL_API_KEY` - API key (overrides `~/.config/bool-cli/config.json`)
+- `BOOL_API_URL` - API base URL (default: `https://bool.com/api`)
+- `BOOL_BASE_URL` - Base URL for `shipit` command (default: `https://bool.com`)
+
+## Command Categories
+
+### Anonymous vs Authenticated
+
+**Anonymous** (no auth required):
+- `bool shipit` - Creates anonymous Bools with update secrets
+
+**Authenticated** (requires `bool auth login`):
+- `bool list`, `create`, `show`, `update`, `delete`, `open`
+- `bool versions`, `deploy`, `pull`
+
+### Read vs Write
+
+**Read-only**:
+- `bool list`, `show`, `versions`
+- `bool auth status`
+
+**Write operations**:
+- `bool create`, `update`, `delete`
+- `bool deploy`, `shipit`
+- `bool auth login`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/commands/auth">
+    Set up API credentials
+  </Card>
+  <Card title="Quick Deploy" icon="rocket" href="/commands/shipit">
+    Deploy in one command with shipit
+  </Card>
+  <Card title="Bool Management" icon="layer-group" href="/commands/bools">
+    Create and manage Bools
+  </Card>
+  <Card title="Deployments" icon="cloud-arrow-up" href="/commands/versions">
+    Deploy and version management
+  </Card>
+</CardGroup>

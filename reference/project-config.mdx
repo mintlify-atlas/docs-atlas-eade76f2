@@ -1,0 +1,211 @@
+---
+title: Project Configuration
+description: Learn about project-level configuration in Bool CLI
+---
+
+Bool CLI stores project-specific settings in a `.bool/config` file within your project directory. This file links your local directory to a Bool on bool.com.
+
+## Config File Location
+
+```
+<your-project>/
+└── .bool/
+    ├── config          # Project configuration
+    └── uploads.json    # Upload state tracking (auto-generated)
+```
+
+## Config File Structure
+
+The `.bool/config` file is a JSON file with the following fields:
+
+```json
+{
+  "slug": "your-bool-slug",
+  "name": "Your Bool Name",
+  "secret": "your-secret-key"
+}
+```
+
+### Fields
+
+<ParamField path="slug" type="string" required>
+  The unique identifier for your Bool on bool.com. Used to associate this directory with a specific Bool.
+</ParamField>
+
+<ParamField path="name" type="string">
+  The display name of your Bool. Helps identify the project in listings and commands.
+</ParamField>
+
+<ParamField path="secret" type="string">
+  Secret key for anonymous Bools created via `shipit`. Used to authenticate updates to anonymous Bools.
+</ParamField>
+
+## How Config is Created
+
+The `.bool/config` file is automatically created or updated by various commands:
+
+### 1. Using `shipit`
+
+When you run `bool shipit` for the first time in a directory:
+
+```bash
+bool shipit
+# Creates .bool/config with slug, name, and secret
+```
+
+Subsequent runs in the same directory will update the existing Bool:
+
+```bash
+bool shipit -m "Updated homepage"
+# Reads slug from .bool/config and creates a new version
+```
+
+### 2. Using `deploy`
+
+When you deploy files, the config is created if it doesn't exist:
+
+```bash
+bool deploy
+# Creates a new Bool and saves slug to .bool/config
+```
+
+If you specify a slug, it updates the config:
+
+```bash
+bool deploy my-bool-slug
+# Associates this directory with the specified Bool
+```
+
+### 3. Using `show`
+
+Viewing Bool details updates your local config:
+
+```bash
+bool show my-bool-slug
+# Saves slug and name to .bool/config
+```
+
+### 4. Using `pull`
+
+Pulling files from a Bool creates the config:
+
+```bash
+bool pull my-bool-slug ./my-project
+# Creates .bool/config in ./my-project
+```
+
+## Manual Configuration
+
+You can manually create or edit the `.bool/config` file:
+
+```bash
+mkdir -p .bool
+cat > .bool/config << EOF
+{
+  "slug": "my-bool-slug",
+  "name": "My Project"
+}
+EOF
+```
+
+After manual configuration, commands will use the specified slug:
+
+```bash
+# No need to specify slug - reads from .bool/config
+bool deploy
+bool show
+bool versions
+```
+
+## Version Control
+
+### Should You Commit `.bool/`?
+
+It depends on your use case:
+
+#### Commit `.bool/config` when:
+
+- The Bool is **authenticated** (created with `bool deploy` or `bool create`)
+- You want team members to deploy to the same Bool
+- The project represents a shared staging or production environment
+
+```gitignore
+# .gitignore - Allow .bool/config but ignore uploads state
+.bool/uploads.json
+```
+
+#### Add `.bool/` to `.gitignore` when:
+
+- The Bool is **anonymous** (created with `bool shipit`)
+- Each developer should have their own preview environment
+- The secret key should not be shared (security concern)
+- You're creating temporary or personal test deployments
+
+```gitignore
+# .gitignore - Ignore entire .bool directory
+.bool/
+```
+
+### Example `.gitignore`
+
+```gitignore
+# Option 1: Commit config, ignore upload state
+.bool/uploads.json
+
+# Option 2: Ignore entire .bool directory (for anonymous Bools)
+# .bool/
+```
+
+## Config Precedence
+
+When you run a command, Bool CLI determines the Bool slug in this order:
+
+1. **Explicit slug argument** (highest priority)
+   ```bash
+   bool deploy my-specific-slug
+   ```
+
+2. **Project config file** (`.bool/config`)
+   ```bash
+   bool deploy  # Uses slug from .bool/config
+   ```
+
+3. **Error if no slug found**
+   ```
+   ✖ Provide a slug or run from a directory with a .bool/config file
+   ```
+
+## Multi-Project Setup
+
+You can manage multiple Bools from different directories:
+
+```
+projects/
+├── frontend/
+│   └── .bool/
+│       └── config  # slug: "my-frontend"
+├── backend/
+│   └── .bool/
+│       └── config  # slug: "my-backend"
+└── docs/
+    └── .bool/
+        └── config  # slug: "my-docs"
+```
+
+Each directory maintains its own Bool association:
+
+```bash
+cd frontend && bool deploy   # Deploys to my-frontend
+cd ../backend && bool deploy  # Deploys to my-backend
+cd ../docs && bool deploy     # Deploys to my-docs
+```
+
+## Resetting Configuration
+
+To unlink a directory from a Bool:
+
+```bash
+rm -rf .bool/
+```
+
+The next `deploy` or `shipit` command will create a new Bool.

@@ -1,0 +1,307 @@
+---
+title: Deployment workflows
+description: Learn how to deploy and update projects with Bool CLI
+---
+
+Bool CLI supports two deployment workflows: anonymous deployment with `shipit` and authenticated deployment with `deploy`.
+
+## Anonymous deployment with shipit
+
+The `shipit` command creates and updates Bools without requiring authentication. Perfect for quick prototypes and demos.
+
+### First deployment
+
+Navigate to your project directory and run:
+
+```bash
+cd my-project
+bool shipit
+```
+
+Output:
+
+```bash
+✔ Shipped "my-project" (12 files)
+  https://abc123.bool01.com
+  slug: abc123
+```
+
+This:
+1. Creates an anonymous Bool with a random slug
+2. Uploads all files (excluding ignored patterns)
+3. Returns a live URL
+4. Saves the slug and secret to `.bool/config`
+
+### Updating an anonymous Bool
+
+Run `shipit` again from the same directory:
+
+```bash
+bool shipit -m "Updated homepage design"
+```
+
+Bool CLI automatically:
+1. Reads the slug and secret from `.bool/config`
+2. Creates a new version of the existing Bool
+3. Updates the live URL with your changes
+
+<Info>
+The `-m` flag adds a commit message to the version history. This helps track what changed in each deployment.
+</Info>
+
+### How anonymous Bools work
+
+Anonymous Bools don't require an API key, but they use an update secret stored in `.bool/config`:
+
+```json
+{
+  "slug": "abc123",
+  "name": "my-project",
+  "secret": "long-random-secret-string"
+}
+```
+
+<Warning>
+Keep the `.bool/config` file secure. Anyone with the secret can update your anonymous Bool.
+</Warning>
+
+## Authenticated deployment
+
+For full control and management features, authenticate and use the `deploy` command.
+
+### Setup authentication
+
+First, log in with your Bool account:
+
+```bash
+bool auth login
+```
+
+Enter your API key when prompted.
+
+### First deployment
+
+Deploy your project:
+
+```bash
+cd my-project
+bool deploy
+```
+
+If no Bool exists for this project, Bool CLI automatically creates one:
+
+```bash
+Creating new Bool "my-project"…
+✔ Created Bool "my-project" (abc123)
+Deploying 12 file(s) from /Users/you/my-project…
+✔ Deployed v1 (12 files)
+Live URL: https://abc123.bool01.com
+```
+
+### Updating an existing Bool
+
+Run `deploy` again to create a new version:
+
+```bash
+bool deploy -m "Added contact form"
+```
+
+Output:
+
+```bash
+Deploying 13 file(s) from /Users/you/my-project…
+✔ Deployed v2 (13 files)
+Live URL: https://abc123.bool01.com
+```
+
+### Deploying to a specific Bool
+
+You can deploy to an existing Bool by specifying its slug:
+
+```bash
+bool deploy my-bool-slug ./src
+```
+
+This deploys files from `./src` to the Bool with slug `my-bool-slug`.
+
+## What gets deployed
+
+### Included files
+
+Bool CLI deploys:
+- Text files (HTML, CSS, JavaScript, JSON, etc.)
+- Source code files
+- Configuration files
+- Documentation files
+
+### Excluded files
+
+By default, these patterns are excluded:
+
+- `.git/` - Git repository data
+- `node_modules/` - Node.js dependencies
+- `__pycache__/` - Python cache files
+- `.DS_Store` - macOS metadata
+- `.bool/` - Bool CLI config
+
+Binary files are automatically detected and skipped during the initial deployment:
+
+- Images (`.png`, `.jpg`, `.gif`, etc.)
+- Videos (`.mp4`, `.webm`, etc.)
+- Fonts (`.woff`, `.ttf`, etc.)
+- Archives (`.zip`, `.tar`, etc.)
+
+<Info>
+Binary files can be uploaded separately using the upload feature. See the `--no-upload` flag documentation.
+</Info>
+
+### Custom exclusions
+
+Create a `.boolignore` file to exclude additional patterns:
+
+```bash
+# .boolignore
+*.log
+.env
+tests/
+docs/
+```
+
+See the [Boolignore guide](/guides/boolignore) for details.
+
+## Deployment options
+
+### Commit messages
+
+Add a message to describe your changes:
+
+```bash
+bool deploy -m "Fixed navigation bug"
+bool shipit -m "Updated homepage"
+```
+
+Messages appear in the version history:
+
+```bash
+bool versions
+```
+
+Output:
+
+```
+┌─────────┬───────┬────────────────────────┬─────────────────────┐
+│ Version │ Files │ Message                │ Created             │
+├─────────┼───────┼────────────────────────┼─────────────────────┤
+│ v2      │ 13    │ Fixed navigation bug   │ 2024-03-15 10:23:45 │
+│ v1      │ 12    │                        │ 2024-03-14 09:15:30 │
+└─────────┴───────┴────────────────────────┴─────────────────────┘
+```
+
+### Exclude patterns
+
+Exclude additional files during deployment:
+
+```bash
+bool deploy --exclude "*.test.js" --exclude "docs/**"
+```
+
+You can specify multiple `--exclude` flags.
+
+### Skipping uploads
+
+Skip binary file uploads (faster deployment):
+
+```bash
+bool deploy --no-upload
+bool shipit --no-upload
+```
+
+### Deploying all files
+
+By default, `deploy` only uploads changed binary files. To upload all binary files:
+
+```bash
+bool deploy --all-files
+```
+
+## Version history
+
+Every deployment creates a new version. View the history:
+
+```bash
+bool versions
+```
+
+Each version includes:
+- Version number (v1, v2, v3, etc.)
+- File count
+- Commit message
+- Creation timestamp
+
+## Rolling back
+
+To roll back to a previous version, pull the old version and redeploy:
+
+```bash
+# Pull version 1
+bool pull --version 1 ./backup
+
+# Deploy from backup
+cd backup
+bool deploy -m "Rolled back to v1"
+```
+
+## CI/CD integration
+
+Bool CLI works great in CI/CD pipelines. Use environment variables for authentication:
+
+```yaml
+# GitHub Actions example
+- name: Deploy to Bool
+  env:
+    BOOL_API_KEY: ${{ secrets.BOOL_API_KEY }}
+  run: |
+    npm install -g bool-cli
+    bool deploy my-project-slug ./dist -m "Deploy from CI"
+```
+
+For anonymous deployments, you can use `shipit` with a stored slug:
+
+```yaml
+- name: Deploy with shipit
+  run: |
+    npm install -g bool-cli
+    bool shipit ./dist --slug existing-slug --name "CI Build"
+```
+
+<Tip>
+Use the `--json` flag in CI/CD to get machine-readable output. See the [JSON output guide](/guides/json-output).
+</Tip>
+
+## Deployment workflows comparison
+
+| Feature | `bool shipit` | `bool deploy` |
+|---------|---------------|---------------|
+| **Authentication** | Not required | Required |
+| **Use case** | Quick prototypes, demos | Production sites, team projects |
+| **Auto-create** | Always creates on first run | Creates if no slug exists |
+| **Update method** | Secret in `.bool/config` | API key authentication |
+| **Management** | Limited (via shipit only) | Full (list, update, delete, etc.) |
+| **Version control** | Yes | Yes |
+| **Custom names** | Yes (via `--name`) | Yes (via `create` or `update`) |
+| **Visibility control** | No (always private) | Yes (via `update --visibility`) |
+
+<CardGroup cols={2}>
+  <Card title="Shipit Command" icon="rocket" href="/commands/shipit">
+    Learn about anonymous deployment
+  </Card>
+  <Card title="Deploy Command" icon="upload" href="/commands/versions">
+    Learn about authenticated deployment
+  </Card>
+  <Card title="Boolignore Guide" icon="ban" href="/guides/boolignore">
+    Configure file exclusions
+  </Card>
+  <Card title="JSON Output" icon="code" href="/guides/json-output">
+    Automate deployments with JSON
+  </Card>
+</CardGroup>

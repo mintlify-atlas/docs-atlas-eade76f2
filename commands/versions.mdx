@@ -1,0 +1,536 @@
+---
+title: "Versions & Deployment"
+description: "Deploy files, view version history, and pull deployed code"
+---
+
+Commands for deploying files and managing versions. All commands require [authentication](/commands/auth).
+
+## bool versions
+
+List version history for a Bool.
+
+```bash
+bool versions [slug]
+```
+
+### Arguments
+
+<ParamField path="slug" type="string">
+  Bool slug. If omitted, reads from `.bool/config`.
+</ParamField>
+
+### Options
+
+<ParamField path="--json" type="boolean">
+  Output as JSON.
+  
+  ```bash
+  bool versions --json
+  ```
+</ParamField>
+
+### Examples
+
+```bash
+# Explicit slug
+bool versions my-site-abc123
+
+# Auto-resolve from .bool/config
+cd my-project
+bool versions
+```
+
+### Example Output
+
+```
+Version  Files  Message                    Created
+v12      24     Updated about page         2024-03-15T10:30:00Z
+v11      24     Fixed mobile nav           2024-03-14T15:20:00Z
+v10      23     Added contact form         2024-03-13T09:10:00Z
+v9       22     Updated homepage           2024-03-12T14:05:00Z
+```
+
+### JSON Output
+
+```json
+[
+  {
+    "version_number": 12,
+    "file_count": 24,
+    "commit_message": "Updated about page",
+    "created_at": "2024-03-15T10:30:00Z"
+  },
+  {
+    "version_number": 11,
+    "file_count": 24,
+    "commit_message": "Fixed mobile nav",
+    "created_at": "2024-03-14T15:20:00Z"
+  }
+]
+```
+
+## bool deploy
+
+Deploy local files as a new version. Creates the Bool if it doesn't exist.
+
+```bash
+bool deploy [slug] [dir]
+```
+
+### Arguments
+
+<ParamField path="slug" type="string">
+  Bool slug. If omitted, reads from `.bool/config`. If no Bool exists, creates a new one.
+</ParamField>
+
+<ParamField path="dir" type="string" default=".">
+  Directory to deploy. Defaults to current directory.
+</ParamField>
+
+### Options
+
+<ParamField path="-m, --message" type="string">
+  Commit message for this version.
+  
+  ```bash
+  bool deploy -m "Updated homepage layout"
+  ```
+</ParamField>
+
+<ParamField path="--exclude" type="string">
+  Exclude pattern (can be repeated). Added to `.boolignore` rules.
+  
+  ```bash
+  bool deploy --exclude "*.test.js" --exclude "*.spec.js"
+  ```
+</ParamField>
+
+<ParamField path="--no-upload" type="boolean">
+  Skip uploading binary/asset files. Text files are always included.
+  
+  ```bash
+  bool deploy --no-upload
+  ```
+</ParamField>
+
+<ParamField path="--all-files" type="boolean">
+  Upload all files, not just changed ones.
+  
+  ```bash
+  bool deploy --all-files
+  ```
+</ParamField>
+
+<ParamField path="--json" type="boolean">
+  Output as JSON.
+  
+  ```bash
+  bool deploy --json
+  ```
+</ParamField>
+
+### Examples
+
+#### Deploy Current Directory
+
+```bash
+cd my-site
+bool deploy
+```
+
+**Output:**
+```
+Deploying 24 file(s) from /home/user/my-site…
+✔ Deployed v12 (24 files)
+Live URL: https://mysite-abc123.bool01.com
+```
+
+#### Deploy Specific Directory
+
+```bash
+bool deploy my-site ./dist
+```
+
+#### Deploy with Commit Message
+
+```bash
+bool deploy -m "Fixed mobile navigation"
+```
+
+#### Create New Bool and Deploy
+
+If no slug exists in `.bool/config`, a new Bool is created:
+
+```bash
+cd my-new-project
+bool deploy
+```
+
+**Output:**
+```
+Creating new Bool "my-new-project"…
+✔ Created Bool "my-new-project" (mynewproject-xyz789)
+Deploying 15 file(s) from /home/user/my-new-project…
+✔ Deployed v1 (15 files)
+Live URL: https://mynewproject-xyz789.bool01.com
+```
+
+#### Exclude Files
+
+```bash
+bool deploy --exclude "*.map" --exclude "*.log"
+```
+
+#### Deploy to Specific Bool
+
+Override `.bool/config` and deploy to a different Bool:
+
+```bash
+bool deploy other-slug-abc123 ./dist
+```
+
+### How It Works
+
+1. **Resolve slug**:
+   - Use provided slug, or
+   - Read from `.bool/config`, or
+   - Create new Bool (using directory name)
+
+2. **Read files**:
+   - Scan directory
+   - Apply `.boolignore` rules
+   - Apply `--exclude` patterns
+
+3. **Deploy**:
+   - POST to `/bools/{slug}/versions/`
+   - Upload binary files separately
+   - Update `.bool/config`
+
+4. **Output results**:
+   - Version number
+   - File count
+   - Live URL
+
+### File Handling
+
+#### .boolignore
+
+Create a `.boolignore` to exclude files:
+
+```
+node_modules/
+.git/
+*.log
+.env
+test/
+```
+
+Syntax follows `.gitignore` patterns.
+
+#### Additional Exclusions
+
+Use `--exclude` to add patterns dynamically:
+
+```bash
+bool deploy --exclude "*.test.js"
+```
+
+#### Text vs Binary Files
+
+- **Text files** (`.js`, `.html`, `.css`, etc.): Sent inline in API request
+- **Binary files** (images, fonts, etc.): Uploaded separately after deployment
+
+Use `--no-upload` to skip binary uploads.
+
+### Config Management
+
+The CLI updates `.bool/config` after deployment:
+
+```json
+{
+  "slug": "mysite-abc123",
+  "name": "My Site"
+}
+```
+
+This enables future commands to work without specifying the slug:
+
+```bash
+bool deploy        # Uses slug from .bool/config
+bool versions      # Same
+bool show          # Same
+```
+
+## bool pull
+
+Download files from a Bool version.
+
+```bash
+bool pull [slug] [dir]
+```
+
+### Arguments
+
+<ParamField path="slug" type="string">
+  Bool slug. If omitted, reads from `.bool/config`.
+</ParamField>
+
+<ParamField path="dir" type="string">
+  Output directory. Defaults to a directory named after the slug.
+</ParamField>
+
+### Options
+
+<ParamField path="--version" type="number">
+  Version number to pull. Defaults to latest version.
+  
+  ```bash
+  bool pull --version 10
+  ```
+</ParamField>
+
+<ParamField path="--json" type="boolean">
+  Output as JSON.
+  
+  ```bash
+  bool pull --json
+  ```
+</ParamField>
+
+### Examples
+
+#### Pull Latest Version
+
+```bash
+bool pull my-site-abc123
+```
+
+**Output:**
+```
+✔ Pulled 24 file(s) to my-site-abc123 (v12)
+```
+
+Files are downloaded to `./my-site-abc123/`.
+
+#### Pull to Specific Directory
+
+```bash
+bool pull my-site ./my-local-copy
+```
+
+#### Pull Specific Version
+
+```bash
+bool pull my-site --version 10
+```
+
+**Output:**
+```
+✔ Pulled 23 file(s) to my-site (v10)
+```
+
+#### Auto-Resolve Slug
+
+```bash
+cd my-project
+bool pull
+```
+
+Pulls to `./my-site-abc123/` (or current directory if slug matches).
+
+#### Pull Current Directory
+
+If the first argument is a directory path, it's treated as `dir` not `slug`:
+
+```bash
+bool pull ./backup  # Reads slug from .bool/config, pulls to ./backup
+```
+
+### How It Works
+
+1. Resolve slug from argument or `.bool/config`
+2. Fetch files from API: `GET /bools/{slug}/files/?version_number={n}`
+3. Create output directory if needed
+4. Write all files to disk
+5. Update `.bool/config` in output directory
+
+### Use Cases
+
+#### Backup Deployed Code
+
+```bash
+bool pull my-site ./backups/v12
+```
+
+#### Download Specific Version
+
+```bash
+bool pull my-site ./rollback --version 10
+```
+
+#### Clone to New Machine
+
+```bash
+bool pull my-site-abc123
+cd my-site-abc123
+bool deploy  # .bool/config already set
+```
+
+## Deployment Workflow
+
+### Initial Setup
+
+```bash
+# 1. Authenticate
+bool auth login
+
+# 2. Create Bool and deploy
+cd my-project
+bool deploy
+
+# 3. .bool/config is created
+cat .bool/config
+# {"slug":"myproject-xyz","name":"my-project"}
+```
+
+### Iterative Development
+
+```bash
+# Make changes
+nano index.html
+
+# Deploy with message
+bool deploy -m "Updated homepage"
+
+# View history
+bool versions
+
+# Open in browser
+bool open
+```
+
+### Rollback
+
+```bash
+# Check version history
+bool versions
+
+# Pull old version
+bool pull --version 10 ./rollback
+
+# Deploy it as new version
+cd rollback
+bool deploy -m "Rollback to v10"
+```
+
+## Anonymous vs Authenticated Deployments
+
+### Authenticated (`bool deploy`)
+
+- Requires `bool auth login`
+- Listed in your dashboard
+- Full version history
+- Team access controls
+- Production-ready
+
+### Anonymous (`bool shipit`)
+
+- No authentication required
+- Controlled by update secret
+- Not listed in dashboard
+- Perfect for demos and prototypes
+
+See [shipit documentation](/commands/shipit) for anonymous deployments.
+
+## Error Handling
+
+### Not Authenticated
+
+```
+✖ No API key configured. Run: bool auth login
+```
+
+**Solution**: Run `bool auth login` first.
+
+### No Files Found
+
+```
+✖ No files found to deploy.
+```
+
+**Solution**: Check your `.boolignore` - it may be excluding everything.
+
+### Not a Directory
+
+```
+✖ Not a directory: /path/to/file.txt
+```
+
+**Solution**: Provide a valid directory path.
+
+### Slug Not Found
+
+```
+✖ Provide a slug or run from a directory with a .bool/config file
+```
+
+**Solution**: Provide an explicit slug or run from a directory with `.bool/config`.
+
+### Version Not Found
+
+```
+✖ Version 99 not found
+```
+
+**Solution**: Use `bool versions` to see available versions.
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: Deploy to Bool
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Bool CLI
+        run: npm install -g @bool/cli
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Deploy
+        env:
+          BOOL_API_KEY: ${{ secrets.BOOL_API_KEY }}
+        run: |
+          mkdir -p .bool
+          echo '{"slug":"${{ secrets.BOOL_SLUG }}"}' > .bool/config
+          bool deploy ./dist -m "Deploy ${{ github.sha }}"
+```
+
+### Environment Variables
+
+Store these as CI secrets:
+- `BOOL_API_KEY` - Your API key from `bool auth login`
+- `BOOL_SLUG` - Your Bool's slug
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Bool Management" icon="layer-group" href="/commands/bools">
+    Create and configure Bools
+  </Card>
+  <Card title="Shipit (Anonymous)" icon="rocket" href="/commands/shipit">
+    Deploy without authentication
+  </Card>
+  <Card title="Authentication" icon="key" href="/commands/auth">
+    Set up API credentials
+  </Card>
+</CardGroup>

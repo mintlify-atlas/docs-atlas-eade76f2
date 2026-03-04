@@ -1,0 +1,463 @@
+---
+title: "Bool Management"
+description: "Create, list, update, and delete Bools"
+---
+
+Commands for managing your Bools. All commands require [authentication](/commands/auth).
+
+## bool list
+
+List your Bools.
+
+```bash
+bool list
+```
+
+**Aliases:** `ls`
+
+### Options
+
+<ParamField path="-l, --limit" type="number" default="20">
+  Number of Bools to show.
+  
+  ```bash
+  bool list --limit 50
+  ```
+</ParamField>
+
+<ParamField path="--json" type="boolean">
+  Output as JSON.
+  
+  ```bash
+  bool list --json
+  ```
+</ParamField>
+
+### Example Output
+
+```
+Name              Slug          Visibility  URL                            Updated
+My Portfolio      portfolio-a1  public      https://portfolio-a1.bool01... 2024-03-15T10:30:00Z
+Docs Site         docs-xyz      private     https://docs-xyz.bool01.com    2024-03-14T15:20:00Z
+Landing Page      landing-b2    unlisted    https://landing-b2.bool01.com  2024-03-10T09:15:00Z
+```
+
+### JSON Output
+
+```json
+[
+  {
+    "name": "My Portfolio",
+    "slug": "portfolio-a1",
+    "visibility": "public",
+    "url": "https://portfolio-a1.bool01.com",
+    "updated_at": "2024-03-15T10:30:00Z"
+  }
+]
+```
+
+## bool create
+
+Create a new Bool.
+
+```bash
+bool create <name>
+```
+
+### Arguments
+
+<ParamField path="name" type="string" required>
+  Bool name.
+</ParamField>
+
+### Options
+
+<ParamField path="--json" type="boolean">
+  Output as JSON.
+</ParamField>
+
+### Examples
+
+```bash
+bool create "My New Site"
+```
+
+**Output:**
+```
+✔ Created "My New Site" (mynewsite-abc123)
+URL: https://mynewsite-abc123.bool01.com
+```
+
+### JSON Output
+
+```bash
+bool create "My Site" --json
+```
+
+```json
+{
+  "name": "My Site",
+  "slug": "mysite-xyz789",
+  "url": "https://mysite-xyz789.bool01.com",
+  "visibility": "private",
+  "created_at": "2024-03-15T10:30:00Z"
+}
+```
+
+### What Gets Created
+
+- Empty Bool with auto-generated slug
+- Default visibility: `private`
+- No files (use `bool deploy` to add files)
+
+## bool show
+
+Show Bool details and latest version.
+
+```bash
+bool show [slug]
+```
+
+**Aliases:** `get`, `info`
+
+### Arguments
+
+<ParamField path="slug" type="string">
+  Bool slug. If omitted, reads from `.bool/config`.
+</ParamField>
+
+### Options
+
+<ParamField path="--json" type="boolean">
+  Output as JSON.
+</ParamField>
+
+### Examples
+
+```bash
+# Explicit slug
+bool show my-site-abc123
+
+# Auto-resolve from .bool/config
+cd my-project
+bool show
+```
+
+### Example Output
+
+```
+Name: My Portfolio
+Slug: portfolio-abc123
+Visibility: public
+Description: My personal portfolio website
+URL: https://portfolio-abc123.bool01.com
+Created: 2024-03-01T12:00:00Z
+Updated: 2024-03-15T10:30:00Z
+
+Latest version: v12
+  Files: 24
+  Message: Updated about page
+  Created: 2024-03-15T10:30:00Z
+```
+
+### Slug Resolution
+
+If you omit the slug, the CLI reads from `.bool/config`:
+
+```json
+{
+  "slug": "my-site-abc123",
+  "name": "My Site"
+}
+```
+
+If no slug is found:
+
+```
+✖ Provide a slug or run from a directory with a .bool/config file
+```
+
+## bool update
+
+Update Bool properties (name, description, visibility).
+
+```bash
+bool update [slug] [options]
+```
+
+### Arguments
+
+<ParamField path="slug" type="string">
+  Bool slug. If omitted, reads from `.bool/config`.
+</ParamField>
+
+### Options
+
+<ParamField path="--name" type="string">
+  New name.
+  
+  ```bash
+  bool update --name "My New Name"
+  ```
+</ParamField>
+
+<ParamField path="--description" type="string">
+  New description.
+  
+  ```bash
+  bool update --description "My portfolio website"
+  ```
+</ParamField>
+
+<ParamField path="--visibility" type="string">
+  Visibility setting. Must be one of: `private`, `team`, `unlisted`, `public`.
+  
+  ```bash
+  bool update --visibility public
+  ```
+</ParamField>
+
+<ParamField path="--json" type="boolean">
+  Output as JSON.
+</ParamField>
+
+### Visibility Options
+
+- `private` - Only you can view
+- `team` - Your team members can view
+- `unlisted` - Anyone with the link can view (not listed publicly)
+- `public` - Listed in public directory
+
+### Examples
+
+```bash
+# Update name
+bool update my-site --name "My Portfolio v2"
+
+# Make public
+bool update my-site --visibility public
+
+# Update multiple fields
+bool update my-site \
+  --name "Portfolio" \
+  --description "My work" \
+  --visibility unlisted
+
+# Auto-resolve slug from .bool/config
+cd my-project
+bool update --visibility public
+```
+
+### Example Output
+
+```
+✔ Updated "My Portfolio v2" (my-site-abc123)
+```
+
+## bool delete
+
+Delete a Bool permanently.
+
+```bash
+bool delete [slug]
+```
+
+**Aliases:** `rm`
+
+### Arguments
+
+<ParamField path="slug" type="string">
+  Bool slug. If omitted, reads from `.bool/config`.
+</ParamField>
+
+### Options
+
+<ParamField path="-y, --yes" type="boolean">
+  Skip confirmation prompt.
+  
+  ```bash
+  bool delete my-site --yes
+  ```
+</ParamField>
+
+### Examples
+
+```bash
+# With confirmation
+bool delete my-site-abc123
+```
+
+**Output:**
+```
+Delete "my-site-abc123"? This cannot be undone. (y/N) y
+✔ Deleted "my-site-abc123".
+```
+
+```bash
+# Skip confirmation
+bool delete my-site-abc123 --yes
+```
+
+```bash
+# Auto-resolve from .bool/config
+cd my-project
+bool delete
+```
+
+### What Gets Deleted
+
+- The Bool and all its versions
+- All deployed files
+- Version history
+- Configuration and settings
+
+**This action cannot be undone.**
+
+### Config Cleanup
+
+If you delete the Bool that's tracked in `.bool/config`, the CLI clears the config:
+
+```json
+{
+  "slug": null,
+  "name": null
+}
+```
+
+## bool open
+
+Open Bool in your default browser.
+
+```bash
+bool open [slug]
+```
+
+### Arguments
+
+<ParamField path="slug" type="string">
+  Bool slug. If omitted, reads from `.bool/config`.
+</ParamField>
+
+### Examples
+
+```bash
+# Explicit slug
+bool open my-site-abc123
+
+# Auto-resolve from .bool/config
+cd my-project
+bool open
+```
+
+**Output:**
+```
+Opening https://my-site-abc123.bool01.com…
+```
+
+### Platform Support
+
+- **macOS**: Uses `open`
+- **Windows**: Uses `start`
+- **Linux**: Uses `xdg-open`
+
+## Slug Resolution
+
+Most commands support automatic slug resolution from `.bool/config`:
+
+```bash
+# Commands that auto-resolve slug:
+bool show          # Show details
+bool update        # Update properties
+bool delete        # Delete Bool
+bool open          # Open in browser
+bool versions      # List versions
+bool deploy        # Deploy files
+bool pull          # Download files
+```
+
+### Example Workflow
+
+```bash
+# Create and configure once
+cd my-project
+bool create "My Project"
+bool deploy
+
+# .bool/config is created automatically
+cat .bool/config
+# {"slug":"myproject-abc123","name":"My Project"}
+
+# All future commands work without specifying slug
+bool show
+bool update --visibility public
+bool deploy
+bool open
+```
+
+### Manual Override
+
+You can always override the auto-resolved slug:
+
+```bash
+# Even if .bool/config exists
+bool show different-slug
+bool deploy other-slug ./dist
+```
+
+## JSON Output
+
+All commands support `--json` for machine-readable output:
+
+```bash
+bool list --json | jq '.[] | .slug'
+bool show my-site --json | jq '.latest_version.version_number'
+bool update my-site --name "New Name" --json
+```
+
+## Error Handling
+
+### Not Authenticated
+
+```
+✖ No API key configured. Run: bool auth login
+```
+
+**Solution**: Run `bool auth login` first.
+
+### Slug Not Found
+
+```
+✖ Provide a slug or run from a directory with a .bool/config file
+```
+
+**Solution**: Provide an explicit slug or run from a directory with `.bool/config`.
+
+### Invalid Visibility
+
+```
+✖ Invalid visibility "hidden". Must be one of: private, team, unlisted, public
+```
+
+**Solution**: Use a valid visibility option.
+
+### Bool Not Found
+
+```
+✖ Bool not found: my-site-abc123
+```
+
+**Solution**: Check the slug is correct. Use `bool list` to see your Bools.
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/commands/auth">
+    Set up API credentials
+  </Card>
+  <Card title="Deploy Files" icon="cloud-arrow-up" href="/commands/versions">
+    Deploy and manage versions
+  </Card>
+  <Card title="Shipit (Anonymous)" icon="rocket" href="/commands/shipit">
+    Deploy without authentication
+  </Card>
+</CardGroup>

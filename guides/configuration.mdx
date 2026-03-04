@@ -1,0 +1,202 @@
+---
+title: Configuration
+description: Understand Bool CLI's configuration system and how to manage settings
+---
+
+Bool CLI uses two levels of configuration: global user configuration and project-level configuration.
+
+## Global configuration
+
+The global configuration file stores your API key and is located at:
+
+```
+~/.config/bool-cli/config.json
+```
+
+### Structure
+
+```json
+{
+  "apiKey": "your-api-key-here"
+}
+```
+
+### Setting your API key
+
+Use the `auth login` command to save your API key:
+
+```bash
+bool auth login
+```
+
+This prompts you for your API key and saves it to the global config file.
+
+<Info>
+You can also set the `BOOL_API_KEY` environment variable instead of using the config file. The environment variable takes precedence.
+</Info>
+
+### Checking your configuration
+
+Verify your API key is configured correctly:
+
+```bash
+bool auth status
+```
+
+This shows a masked version of your API key and checks the API connection.
+
+## Project-level configuration
+
+Each project can have a `.bool/config` file that stores the Bool slug and name for that directory.
+
+### Location
+
+```
+<your-project>/.bool/config
+```
+
+### Structure
+
+```json
+{
+  "slug": "abc123",
+  "name": "My Project",
+  "secret": "update-secret-for-anonymous-bools"
+}
+```
+
+### Fields
+
+<ParamField path="slug" type="string" required>
+  The Bool identifier. Used to identify which Bool to update when running commands without specifying a slug.
+</ParamField>
+
+<ParamField path="name" type="string">
+  The display name of the Bool. Updated automatically when the Bool's name changes.
+</ParamField>
+
+<ParamField path="secret" type="string">
+  Update secret for anonymous Bools. Required to update anonymous deployments created with `shipit`.
+</ParamField>
+
+### Automatic creation
+
+The `.bool/config` file is automatically created or updated by these commands:
+
+- `bool shipit` - Creates config with slug, name, and secret (for anonymous Bools)
+- `bool deploy` - Creates or updates config with slug and name
+- `bool show` - Updates config with slug and name
+- `bool pull` - Updates config with slug and name
+
+### Using project config
+
+Once a `.bool/config` file exists in your project directory, you can run commands without specifying the slug:
+
+```bash
+# With project config
+cd my-project
+bool show           # Uses slug from .bool/config
+bool versions       # Uses slug from .bool/config
+bool deploy         # Uses slug from .bool/config
+
+# Without project config
+bool show abc123    # Must specify slug
+```
+
+## Environment variables
+
+Bool CLI respects these environment variables:
+
+- `BOOL_API_KEY` - Override the API key from config file
+- `BOOL_API_URL` - Override the API base URL (default: `https://bool.com/api`)
+- `BOOL_BASE_URL` - Override the base URL for shipit (default: `https://bool.com`)
+
+See the [Environment Variables reference](/reference/environment-variables) for details.
+
+## Configuration precedence
+
+Bool CLI uses this order of precedence for settings:
+
+1. Command-line flags (highest priority)
+2. Environment variables
+3. Project-level config (`.bool/config`)
+4. Global config (`~/.config/bool-cli/config.json`)
+
+### Example: API key resolution
+
+```bash
+# 1. Command may use BOOL_API_KEY env var (highest priority)
+BOOL_API_KEY=key-from-env bool list
+
+# 2. Falls back to global config
+bool list  # Uses ~/.config/bool-cli/config.json
+```
+
+## Version control
+
+### Global config
+
+Never commit `~/.config/bool-cli/config.json` to version control. This file contains your API key and is personal to your machine.
+
+### Project config
+
+Whether to commit `.bool/config` depends on your workflow:
+
+**Commit `.bool/config` if:**
+- Your team shares the same Bool for a project
+- You want CI/CD to deploy to a specific Bool
+- You're building a shared demo or documentation site
+
+**Add `.bool/` to `.gitignore` if:**
+- Each developer has their own Bool for testing
+- You're using anonymous deployments (`shipit`) for temporary previews
+- You want developers to create their own Bools
+
+<Tip>
+For most projects, add `.bool/` to `.gitignore` so each developer can maintain their own Bool for testing.
+</Tip>
+
+## Multiple projects
+
+You can manage multiple projects with separate configs:
+
+```bash
+project-a/
+  .bool/config     # slug: project-a-slug
+  
+project-b/
+  .bool/config     # slug: project-b-slug
+```
+
+Commands automatically use the config from the current directory:
+
+```bash
+cd project-a
+bool show          # Shows project-a-slug
+
+cd ../project-b
+bool show          # Shows project-b-slug
+```
+
+## Manual configuration
+
+While Bool CLI automatically manages project config, you can manually create or edit `.bool/config`:
+
+```bash
+mkdir -p .bool
+cat > .bool/config << EOF
+{
+  "slug": "my-existing-bool",
+  "name": "My Project"
+}
+EOF
+```
+
+This is useful when:
+- Connecting an existing directory to an existing Bool
+- Setting up a new developer's environment
+- Restoring config after resetting your directory
+
+<Warning>
+If you manually edit `.bool/config`, ensure the JSON is valid. Invalid JSON will cause commands to fail.
+</Warning>

@@ -1,0 +1,116 @@
+---
+title: Installation
+description: Install and set up the Bool CLI tool on your system
+---
+
+## Install Bool CLI
+
+Install the Bool CLI globally using your preferred package manager:
+
+<CodeGroup>
+
+```bash npm
+npm install -g bool-cli
+```
+
+```bash yarn
+yarn global add bool-cli
+```
+
+```bash pnpm
+pnpm add -g bool-cli
+```
+
+</CodeGroup>
+
+This installs the `bool` command globally on your system.
+
+## Verify Installation
+
+Confirm that Bool CLI is installed correctly by checking the version:
+
+```bash
+bool --version
+```
+
+You should see the current version number (e.g., `0.2.4`).
+
+## System Requirements
+
+<Info>
+  Bool CLI requires **Node.js** to be installed on your system. The CLI is built as an ES module and uses modern Node.js features.
+</Info>
+
+### Prerequisites
+
+- **Node.js**: Version 14 or higher recommended
+- **npm**, **yarn**, or **pnpm**: For package installation
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found: bool">
+    If you get a `command not found` error after installation, ensure your global npm bin directory is in your PATH.
+
+    Check your global bin directory:
+    ```bash
+    npm config get prefix
+    ```
+
+    Add the bin directory to your PATH in your shell configuration file (`~/.bashrc`, `~/.zshrc`, etc.):
+    ```bash
+    export PATH="$PATH:$(npm config get prefix)/bin"
+    ```
+
+    Restart your terminal or run `source ~/.bashrc` (or your shell config file).
+  </Accordion>
+
+  <Accordion title="Permission errors during installation">
+    If you encounter permission errors when installing globally, you have a few options:
+
+    **Option 1: Use a Node version manager (recommended)**
+    
+    Use [nvm](https://github.com/nvm-sh/nvm) or [fnm](https://github.com/Schniz/fnm) to manage Node.js versions. This avoids permission issues with global packages.
+
+    **Option 2: Fix npm permissions**
+    
+    Configure npm to use a different directory for global packages:
+    ```bash
+    mkdir ~/.npm-global
+    npm config set prefix '~/.npm-global'
+    export PATH=~/.npm-global/bin:$PATH
+    ```
+
+    **Option 3: Use npx (no installation needed)**
+    
+    Run Bool CLI commands directly with npx:
+    ```bash
+    npx bool-cli shipit
+    ```
+  </Accordion>
+
+  <Accordion title="Outdated version">
+    To update to the latest version of Bool CLI:
+
+    ```bash
+    npm update -g bool-cli
+    ```
+
+    Or reinstall:
+    ```bash
+    npm uninstall -g bool-cli
+    npm install -g bool-cli
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Deploy your first project in under a minute
+  </Card>
+  <Card title="Authentication" icon="key" href="/authentication">
+    Set up your API key for full features
+  </Card>
+</CardGroup>

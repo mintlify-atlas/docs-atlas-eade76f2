@@ -1,0 +1,312 @@
+---
+title: Boolignore
+description: Control which files are included in your deployments with ignore patterns
+---
+
+Bool CLI provides flexible file filtering to exclude unwanted files from your deployments. This is similar to how `.gitignore` works.
+
+## Default exclusions
+
+Bool CLI automatically excludes these patterns from all deployments:
+
+```
+.git
+node_modules
+__pycache__
+.DS_Store
+.bool
+```
+
+These patterns are always ignored, even without a `.boolignore` file.
+
+### Why these patterns?
+
+- **`.git`** - Repository metadata isn't needed in production
+- **`node_modules`** - Dependencies should be rebuilt in production
+- **`__pycache__`** - Python cache files are machine-specific
+- **`.DS_Store`** - macOS metadata files
+- **`.bool`** - Bool CLI's config files (contains secrets for anonymous Bools)
+
+## Binary files
+
+Binary files are automatically detected by extension and skipped during the initial deployment:
+
+### Image formats
+```
+.png, .jpg, .jpeg, .gif, .bmp, .ico, .webp, .svg
+```
+
+### Media files
+```
+.mp3, .mp4, .wav, .ogg, .webm, .avi, .mov
+```
+
+### Font files
+```
+.woff, .woff2, .ttf, .eot, .otf
+```
+
+### Archive formats
+```
+.pdf, .zip, .gz, .tar, .rar, .7z
+```
+
+### Other binaries
+```
+.exe, .dll, .so, .dylib, .pyc, .class, .o
+```
+
+<Info>
+Binary files can be uploaded separately using Bool CLI's upload feature. Text files are sent in the API request, while binary files are uploaded asynchronously.
+</Info>
+
+## Custom ignore patterns
+
+Create a `.boolignore` file in your project root to add custom exclusion patterns:
+
+```bash
+# .boolignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Log files
+*.log
+logs/
+
+# Build artifacts
+dist/
+build/
+*.min.js
+
+# Test files
+**/*.test.js
+**/*.spec.ts
+__tests__/
+coverage/
+
+# Documentation (if you don't want it deployed)
+docs/
+*.md
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+```
+
+## Syntax
+
+`.boolignore` uses the same syntax as `.gitignore`:
+
+### Basic patterns
+
+```bash
+# Ignore a specific file
+config.local.json
+
+# Ignore all files with an extension
+*.log
+
+# Ignore a directory
+temp/
+logs/
+```
+
+### Wildcard patterns
+
+```bash
+# Ignore all .test.js files in any directory
+**/*.test.js
+
+# Ignore all files in a specific directory
+src/drafts/**
+
+# Ignore specific files in any directory
+**/secrets.json
+```
+
+### Negation
+
+Exclude a file from an ignore pattern with `!`:
+
+```bash
+# Ignore all .env files
+*.env
+
+# Except this one
+!.env.example
+```
+
+### Comments
+
+Lines starting with `#` are comments:
+
+```bash
+# This is a comment
+*.log  # This ignores log files
+```
+
+## Common patterns
+
+### Node.js projects
+
+```bash
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Cache
+.cache/
+.parcel-cache/
+```
+
+### Python projects
+
+```bash
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+```
+
+### Frontend projects
+
+```bash
+# Build output
+dist/
+build/
+.next/
+.nuxt/
+.vuepress/dist/
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# Cache
+.cache/
+.temp/
+
+# Source maps (if you don't want to deploy them)
+*.map
+```
+
+## Command-line exclusions
+
+You can also exclude files via the `--exclude` flag without modifying `.boolignore`:
+
+```bash
+bool deploy --exclude "*.test.js" --exclude "docs/**"
+```
+
+This is useful for:
+- One-off exclusions
+- CI/CD scripts with specific requirements
+- Testing different exclusion patterns
+
+<Info>
+Command-line exclusions are added to the patterns from `.boolignore`. They don't replace the `.boolignore` file.
+</Info>
+
+## Checking what will be deployed
+
+Before deploying, you can check which files will be included. Bool CLI reads files based on:
+
+1. Default exclusions (`.git`, `node_modules`, etc.)
+2. Binary file detection
+3. Patterns in `.boolignore`
+4. Command-line `--exclude` flags
+
+<Tip>
+Create a test deployment to verify your ignore patterns are working correctly:
+
+```bash
+bool shipit --name "test-deployment"
+```
+
+Check the file count in the output to ensure the expected number of files were deployed.
+</Tip>
+
+## Troubleshooting
+
+### Files not being excluded
+
+If files aren't being excluded:
+
+1. Check `.boolignore` syntax - ensure patterns are correct
+2. Verify the file is in the project directory tree
+3. Try an absolute pattern with `**/filename`
+
+### Too many files excluded
+
+If too few files are being deployed:
+
+1. Check for overly broad patterns like `*.js`
+2. Use negation (`!pattern`) to include specific files
+3. Review default exclusions - they can't be overridden
+
+### Binary files not deploying
+
+Binary files are excluded from the initial deployment by default. They're uploaded separately in the background. Use `--no-upload` to skip binary uploads entirely:
+
+```bash
+bool deploy --no-upload
+```
+
+<CardGroup cols={2}>
+  <Card title="Deployment Guide" icon="upload" href="/guides/deployment">
+    Learn about deployment workflows
+  </Card>
+  <Card title="Deploy Command" icon="terminal" href="/commands/versions">
+    View deploy command options
+  </Card>
+  <Card title="Shipit Command" icon="rocket" href="/commands/shipit">
+    View shipit command options
+  </Card>
+  <Card title="Configuration" icon="gear" href="/guides/configuration">
+    Configure Bool CLI settings
+  </Card>
+</CardGroup>

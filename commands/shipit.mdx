@@ -1,0 +1,348 @@
+---
+title: "Shipit Command"
+description: "Create and deploy anonymous Bools in one step"
+---
+
+The `bool shipit` command creates an anonymous Bool and uploads your local files in a single step. No authentication required.
+
+## Quick Start
+
+```bash
+# Ship current directory
+bool shipit
+
+# Ship a specific directory
+bool shipit ./my-site
+```
+
+### First Run
+
+```bash
+cd my-website
+bool shipit
+```
+
+**Output:**
+```
+https://abc123.bool01.com
+✔ Shipped "my-website" (12 files)
+  https://abc123.bool01.com
+  slug: abc123
+```
+
+The CLI creates `.bool/config` to track this Bool:
+
+```json
+{
+  "slug": "abc123",
+  "name": "my-website",
+  "secret": "update_xyz789"
+}
+```
+
+### Subsequent Runs
+
+```bash
+# Update the same Bool (reads slug from .bool/config)
+bool shipit
+```
+
+**Output:**
+```
+https://abc123.bool01.com
+✔ Updated v2 (12 files)
+  https://abc123.bool01.com
+  slug: abc123
+```
+
+## Usage
+
+```bash
+bool shipit [directory] [options]
+```
+
+### Arguments
+
+<ParamField path="directory" type="string" default=".">
+  Directory to upload. Defaults to current directory.
+</ParamField>
+
+### Options
+
+<ParamField path="--slug" type="string">
+  Update an existing anonymous Bool instead of creating a new one. Overrides slug from `.bool/config`.
+  
+  ```bash
+  bool shipit --slug abc123
+  ```
+</ParamField>
+
+<ParamField path="--name" type="string">
+  Bool name. Defaults to name from `.bool/config`, then directory name.
+  
+  ```bash
+  bool shipit --name "My Portfolio"
+  ```
+</ParamField>
+
+<ParamField path="-m, --message" type="string">
+  Commit message for version history. Only used when updating an existing Bool.
+  
+  ```bash
+  bool shipit -m "Updated homepage layout"
+  ```
+</ParamField>
+
+<ParamField path="--no-upload" type="boolean">
+  Skip uploading binary/asset files. Text files are always included in the initial request.
+  
+  ```bash
+  bool shipit --no-upload
+  ```
+</ParamField>
+
+<ParamField path="--base-url" type="string" default="https://bool.com">
+  API base URL. Can also be set via `BOOL_BASE_URL` environment variable.
+  
+  ```bash
+  bool shipit --base-url https://staging.bool.com
+  ```
+</ParamField>
+
+## How It Works
+
+### Create Mode (First Run)
+
+1. Reads directory contents (respects `.boolignore`)
+2. Creates anonymous Bool via `POST /api/bools/create-anonymous/`
+3. Receives `slug` and `secret` in response
+4. Saves to `.bool/config` for future updates
+5. Uploads binary files in background
+6. Outputs live URL
+
+### Update Mode (Subsequent Runs)
+
+1. Reads `slug` and `secret` from `.bool/config`
+2. Reads directory contents
+3. Creates new version via `POST /api/bools/{slug}/versions-anonymous/`
+4. Uploads binary files in background
+5. Outputs live URL and version number
+
+## Examples
+
+### Ship Current Directory
+
+```bash
+bool shipit
+```
+
+### Ship a Specific Directory
+
+```bash
+bool shipit ~/projects/my-site
+```
+
+### Update with Custom Commit Message
+
+```bash
+bool shipit -m "Fixed mobile navigation"
+```
+
+### Create with Custom Name
+
+```bash
+bool shipit --name "Portfolio v2"
+```
+
+### Update Specific Bool by Slug
+
+```bash
+bool shipit --slug abc123 ./dist
+```
+
+### Use Custom API URL
+
+```bash
+export BOOL_BASE_URL="https://staging.bool.com"
+bool shipit
+```
+
+Or inline:
+
+```bash
+bool shipit --base-url https://staging.bool.com
+```
+
+## File Handling
+
+### .boolignore
+
+Create a `.boolignore` file to exclude files from upload:
+
+```
+node_modules/
+.git/
+*.log
+.env
+```
+
+Syntax follows `.gitignore` patterns (uses the `ignore` npm package).
+
+### Default Ignores
+
+If no `.boolignore` exists, the CLI respects `.gitignore`.
+
+### Text vs Binary Files
+
+- **Text files**: Sent inline in the initial API request
+- **Binary files**: Uploaded separately after Bool creation
+
+Use `--no-upload` to skip binary file uploads.
+
+## Anonymous Bools vs Authenticated Bools
+
+### Anonymous Bools (`shipit`)
+
+- No authentication required
+- Controlled via update `secret` in `.bool/config`
+- Cannot be viewed in web dashboard
+- Perfect for quick prototypes and demos
+
+### Authenticated Bools (`deploy`)
+
+- Requires `bool auth login`
+- Listed in your account dashboard
+- Supports teams and permissions
+- Full version history and management UI
+
+See [deploy documentation](/commands/versions) for authenticated deployments.
+
+## Output
+
+### Stdout (Script-Friendly)
+
+The live URL is printed to stdout:
+
+```bash
+URL=$(bool shipit)
+echo $URL
+# https://abc123.bool01.com
+```
+
+### Stderr (Human-Readable)
+
+Progress messages and metadata go to stderr:
+
+```
+✔ Shipped "my-site" (12 files)
+  https://abc123.bool01.com
+  slug: abc123
+```
+
+## Error Handling
+
+### Not a Directory
+
+```
+✖ Not a directory: /path/to/file.txt
+```
+
+**Solution**: Provide a valid directory path.
+
+### No Files Found
+
+```
+✖ No files found to deploy.
+```
+
+**Solution**: Check your `.boolignore` - it may be excluding everything.
+
+### API Error
+
+```
+✖ {"error":"Invalid secret"}
+```
+
+**Solution**: The update secret in `.bool/config` is invalid. Try creating a new Bool by removing `.bool/config`.
+
+### Timeout
+
+```
+✖ The operation was aborted due to timeout
+```
+
+**Solution**: Request timed out after 30 seconds. Check your network connection and try again.
+
+## .bool/config Format
+
+The CLI creates this file after the first `shipit`:
+
+```json
+{
+  "slug": "abc123",
+  "name": "my-website",
+  "secret": "update_xyz789"
+}
+```
+
+### Fields
+
+- `slug` - Bool identifier, used in URL: `https://{slug}.bool01.com`
+- `name` - Human-readable name
+- `secret` - Update secret for anonymous deployments (keep private!)
+
+### Sharing Your Code
+
+Add `.bool/config` to `.gitignore` to avoid sharing your update secret:
+
+```gitignore
+.bool/
+```
+
+Anyone with the update secret can deploy to your Bool.
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Bool CLI
+        run: npm install -g @bool/cli
+      
+      - name: Deploy
+        run: |
+          mkdir -p .bool
+          echo '{"slug":"${{ secrets.BOOL_SLUG }}","secret":"${{ secrets.BOOL_SECRET }}"}' > .bool/config
+          bool shipit ./dist
+```
+
+### Environment Variables in CI
+
+Store these as secrets:
+- `BOOL_SLUG` - Your Bool's slug
+- `BOOL_SECRET` - Update secret from `.bool/config`
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card title="Deploy (Authenticated)" icon="cloud-arrow-up" href="/commands/versions">
+    Deploy with authentication and team features
+  </Card>
+  <Card title="Authentication" icon="key" href="/commands/auth">
+    Set up authenticated deployments
+  </Card>
+  <Card title="Version History" icon="clock-rotate-left" href="/commands/versions">
+    View deployment history
+  </Card>
+</CardGroup>

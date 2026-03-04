@@ -1,0 +1,391 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for Bool CLI
+---
+
+This guide covers common errors and issues you may encounter while using Bool CLI.
+
+## Authentication Issues
+
+<AccordionGroup>
+  <Accordion title="No API key configured. Run: bool auth login">
+    **Cause:** You're trying to run an authenticated command without setting up your API key.
+
+    **Solution:**
+    ```bash
+    bool auth login
+    # Enter your API key when prompted
+    ```
+
+    **Alternative:** Set the `BOOL_API_KEY` environment variable:
+    ```bash
+    export BOOL_API_KEY=your_api_key_here
+    bool deploy
+    ```
+
+    **Get an API key:**
+    1. Visit [bool.com](https://bool.com)
+    2. Navigate to your account settings
+    3. Generate a new API key
+  </Accordion>
+
+  <Accordion title="Invalid or expired API key (401)">
+    **Cause:** Your API key is no longer valid or has been revoked.
+
+    **Solution:**
+    1. Generate a new API key from your Bool.com account
+    2. Update your stored key:
+       ```bash
+       bool auth login
+       # Enter the new API key
+       ```
+
+    **Verify your authentication:**
+    ```bash
+    bool auth status
+    # Should show: API is reachable and healthy
+    ```
+  </Accordion>
+
+  <Accordion title="API health check failed">
+    **Cause:** Cannot connect to the Bool API.
+
+    **Common reasons:**
+    - Network connectivity issues
+    - Firewall blocking requests
+    - API service is down
+    - Incorrect `BOOL_API_URL` setting
+
+    **Solution:**
+    1. Check your internet connection
+    2. Verify the API URL:
+       ```bash
+       echo $BOOL_API_URL
+       # Should be https://bool.com/api or empty (uses default)
+       ```
+    3. Try the health check:
+       ```bash
+       bool auth status
+       ```
+    4. If issues persist, check [bool.com/status](https://bool.com/status) for service status
+  </Accordion>
+</AccordionGroup>
+
+## Configuration Issues
+
+<AccordionGroup>
+  <Accordion title="Provide a slug or run from a directory with a .bool/config file">
+    **Cause:** The command requires a Bool slug, but none was provided and no `.bool/config` file exists.
+
+    **Solution 1:** Provide the slug explicitly:
+    ```bash
+    bool deploy my-bool-slug
+    bool show my-bool-slug
+    bool versions my-bool-slug
+    ```
+
+    **Solution 2:** Create or navigate to a directory with `.bool/config`:
+    ```bash
+    # If you've deployed before, the config should exist
+    cat .bool/config
+    
+    # If missing, deploy to create it
+    bool deploy
+    ```
+
+    **Solution 3:** Manually create the config:
+    ```bash
+    mkdir -p .bool
+    echo '{"slug": "your-slug-here", "name": "Your Bool"}' > .bool/config
+    ```
+  </Accordion>
+
+  <Accordion title="Not a directory: /path/to/dir">
+    **Cause:** The specified path doesn't exist or isn't a directory.
+
+    **Solution:**
+    1. Verify the path exists:
+       ```bash
+       ls -la /path/to/dir
+       ```
+    2. Use the correct path:
+       ```bash
+       bool deploy ./correct-path
+       bool shipit ./correct-path
+       ```
+    3. If omitted, the current directory is used:
+       ```bash
+       cd /path/to/dir
+       bool deploy
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Deployment Issues
+
+<AccordionGroup>
+  <Accordion title="No files found to deploy">
+    **Cause:** After applying ignore patterns, there are no files left to deploy.
+
+    **Common reasons:**
+    - Empty directory
+    - All files are ignored by `.boolignore`
+    - All files are binary (not included in code deployments)
+    - All files match default ignore patterns (`.git`, `node_modules`, etc.)
+
+    **Solution:**
+    1. Check what files exist:
+       ```bash
+       ls -la
+       ```
+    2. Review your `.boolignore` file:
+       ```bash
+       cat .boolignore
+       # Remove overly broad patterns like *
+       ```
+    3. Check default ignore patterns (always ignored):
+       - `.git`
+       - `node_modules`
+       - `__pycache__`
+       - `.DS_Store`
+       - `.bool`
+    4. Ensure you have text files (binary files are uploaded separately):
+       ```bash
+       # These are deployed as code
+       *.js *.html *.css *.json *.md
+       
+       # These are uploaded separately
+       *.jpg *.png *.pdf
+       ```
+  </Accordion>
+
+  <Accordion title="API error: 404">
+    **Cause:** The Bool slug doesn't exist or you don't have access.
+
+    **Solution:**
+    1. Verify the slug exists:
+       ```bash
+       bool list
+       # Check if your slug appears in the list
+       ```
+    2. Check your `.bool/config`:
+       ```bash
+       cat .bool/config
+       # Verify the slug is correct
+       ```
+    3. If the Bool was deleted, create a new one:
+       ```bash
+       rm -rf .bool/
+       bool deploy  # Creates a new Bool
+       ```
+  </Accordion>
+
+  <Accordion title="API error: 413 or Request Entity Too Large">
+    **Cause:** The total size of files being deployed exceeds the API limit.
+
+    **Solution:**
+    1. Use `.boolignore` to exclude large files:
+       ```bash
+       cat > .boolignore << EOF
+       *.log
+       dist/
+       build/
+       *.zip
+       EOF
+       ```
+    2. Remove large binary files (they're uploaded separately):
+       - Binary files don't count toward code deployment limits
+       - Use the file upload feature for large assets
+    3. Check your file sizes:
+       ```bash
+       find . -type f -size +1M
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## File Upload Issues
+
+<AccordionGroup>
+  <Accordion title="File too large (max 5MB)">
+    **Cause:** Individual file uploads are limited to 5MB.
+
+    **Solution:**
+    1. Compress large images before uploading
+    2. Use external hosting for very large assets (S3, CDN, etc.)
+    3. Split large files if possible
+    4. Files over 5MB are automatically skipped:
+       ```
+       Skipped 2 file(s) over 5MB: large-image.jpg, video.mp4
+       ```
+  </Accordion>
+
+  <Accordion title="Unsupported file type (415)">
+    **Cause:** The file type is not in the supported upload list.
+
+    **Supported file types:**
+    - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`
+    - Documents: `.pdf`, `.txt`, `.csv`, `.doc`, `.docx`, `.xls`, `.xlsx`
+    - Data: `.json`, `.xml`
+
+    **Solution:**
+    1. Convert files to supported formats
+    2. For other file types, include them as code (if text-based)
+    3. Host unsupported files externally and reference via URL
+  </Accordion>
+
+  <Accordion title="No API key configured — skipping file uploads">
+    **Cause:** File uploads require authentication, but you're using anonymous deployment.
+
+    **Solution:**
+    
+    **Option 1:** Set up authentication to enable uploads:
+    ```bash
+    bool auth login
+    bool shipit  # Will now upload files
+    ```
+
+    **Option 2:** Use authenticated deployment:
+    ```bash
+    bool deploy  # Automatically uploads files if API key is set
+    ```
+
+    **Note:** Anonymous `shipit` deployments (without API key) can still deploy code, but won't upload binary assets.
+  </Accordion>
+
+  <Accordion title="Some uploads failed. Retry by redeploying">
+    **Cause:** Network errors, timeouts, or transient API issues during file upload.
+
+    **Solution:**
+    1. Redeploy to retry failed uploads:
+       ```bash
+       bool deploy -m "Retry uploads"
+       ```
+    2. Only changed files will be re-uploaded (tracked in `.bool/uploads.json`)
+    3. Check for specific error messages:
+       - **401**: API key issue (update your key)
+       - **413**: File too large (>5MB)
+       - **415**: Unsupported file type
+       - **Network timeout**: Check connection and retry
+  </Accordion>
+</AccordionGroup>
+
+## Command-Specific Issues
+
+<AccordionGroup>
+  <Accordion title="Invalid limit. Must be a positive integer">
+    **Cause:** The `--limit` flag received an invalid value.
+
+    **Solution:**
+    ```bash
+    # Incorrect
+    bool list --limit abc
+    bool list --limit -5
+    
+    # Correct
+    bool list --limit 10
+    bool list --limit 50
+    ```
+  </Accordion>
+
+  <Accordion title="Invalid visibility. Must be one of: private, team, unlisted, public">
+    **Cause:** The `--visibility` flag has an invalid value.
+
+    **Solution:**
+    ```bash
+    # Incorrect
+    bool update --visibility secret
+    
+    # Correct
+    bool update --visibility private
+    bool update --visibility unlisted
+    bool update --visibility public
+    bool update --visibility team
+    ```
+  </Accordion>
+
+  <Accordion title="Provide at least one of --name, --description, or --visibility">
+    **Cause:** The `bool update` command requires at least one field to update.
+
+    **Solution:**
+    ```bash
+    # Incorrect (no fields to update)
+    bool update my-slug
+    
+    # Correct (at least one field)
+    bool update my-slug --name "New Name"
+    bool update my-slug --description "New description"
+    bool update my-slug --visibility public
+    bool update my-slug --name "New Name" --visibility public
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## General Debugging
+
+### Check Authentication Status
+
+```bash
+bool auth status
+```
+
+Expected output:
+```
+API key: bk_1234…5678
+✔ API is reachable and healthy.
+```
+
+### View Current Configuration
+
+```bash
+# User config (API key)
+cat ~/.config/bool-cli/config.json
+
+# Project config (Bool slug)
+cat .bool/config
+```
+
+### Verify Environment Variables
+
+```bash
+echo $BOOL_API_KEY
+echo $BOOL_API_URL
+echo $BOOL_BASE_URL
+```
+
+### Test Deployment Without Uploads
+
+```bash
+# Deploy code only, skip file uploads
+bool deploy --no-upload
+```
+
+### Check What Files Will Be Deployed
+
+Bool CLI doesn't have a dry-run mode, but you can check manually:
+
+```bash
+# List all files (excluding default ignores)
+find . -type f \
+  ! -path './.git/*' \
+  ! -path './node_modules/*' \
+  ! -path './.bool/*' \
+  ! -path './__pycache__/*'
+
+# Check .boolignore patterns
+cat .boolignore
+```
+
+## Getting Help
+
+If you're still experiencing issues:
+
+1. **Check the documentation:** Review command-specific pages
+2. **GitHub Issues:** Report bugs at [github.com/boolhq/bool-cli](https://github.com/boolhq/bool-cli)
+3. **Support:** Contact support at [bool.com/support](https://bool.com/support)
+4. **Status Page:** Check [bool.com/status](https://bool.com/status) for service status
+
+When reporting issues, include:
+- The exact command you ran
+- The complete error message
+- Bool CLI version (`bool --version`)
+- Your operating system

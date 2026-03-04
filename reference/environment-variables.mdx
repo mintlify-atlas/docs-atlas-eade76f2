@@ -1,0 +1,104 @@
+---
+title: Environment Variables
+description: Configure Bool CLI using environment variables
+---
+
+Bool CLI supports environment variables for configuration. These provide an alternative to storing settings in the config file, which is useful for CI/CD environments or temporary overrides.
+
+## Available Variables
+
+### BOOL_API_KEY
+
+Your Bool.com API key for authentication.
+
+```bash
+export BOOL_API_KEY=your_api_key_here
+```
+
+**Usage:**
+- Alternative to storing the API key in `~/.config/bool-cli/config.json`
+- Takes precedence over the config file if both are set
+- Required for all authenticated commands (deploy, list, create, etc.)
+
+**When to use:**
+- CI/CD pipelines where you don't want to persist the key
+- Temporary authentication without modifying config files
+- Multi-account scenarios where you switch between API keys
+
+### BOOL_API_URL
+
+Base URL for the Bool API.
+
+```bash
+export BOOL_API_URL=https://bool.com/api
+```
+
+**Default:** `https://bool.com/api`
+
+**Usage:**
+- Override the API endpoint for testing or custom deployments
+- Useful for development environments pointing to staging APIs
+
+### BOOL_BASE_URL
+
+Base URL used by the `shipit` command.
+
+```bash
+export BOOL_BASE_URL=https://bool.com
+```
+
+**Default:** `https://bool.com`
+
+**Usage:**
+- Override the base URL for anonymous Bool creation
+- Used when generating live URLs for deployed Bools
+- Can also be set via the `--base-url` flag in the `shipit` command
+
+## Priority Order
+
+When both environment variables and config files are present, Bool CLI follows this priority:
+
+1. **Command-line flags** (highest priority)
+2. **Environment variables**
+3. **Config files** (lowest priority)
+
+## Example Usage
+
+### Temporary Override
+
+```bash
+# Use a different API key for one command
+BOOL_API_KEY=temp_key bool list
+```
+
+### CI/CD Configuration
+
+```yaml
+# GitHub Actions example
+env:
+  BOOL_API_KEY: ${{ secrets.BOOL_API_KEY }}
+
+steps:
+  - name: Deploy to Bool
+    run: bool deploy
+```
+
+### Development Setup
+
+```bash
+# .env.local or shell profile
+export BOOL_API_KEY=your_dev_api_key
+export BOOL_API_URL=https://staging.bool.com/api
+export BOOL_BASE_URL=https://staging.bool.com
+```
+
+## Security Considerations
+
+<Warning>
+  Never commit API keys to version control. Use environment variables or secure secret management systems.
+</Warning>
+
+- Add `.env` files to your `.gitignore`
+- Use secret management in CI/CD (GitHub Secrets, AWS Secrets Manager, etc.)
+- Rotate API keys regularly
+- Use separate keys for development and production

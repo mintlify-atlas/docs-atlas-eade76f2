@@ -1,0 +1,401 @@
+---
+title: JSON output
+description: Use JSON output mode for automation and scripting
+---
+
+Every Bool CLI command supports the `--json` flag for machine-readable output. This makes Bool CLI perfect for CI/CD pipelines, scripts, and automation workflows.
+
+## Basic usage
+
+Add `--json` to any command:
+
+```bash
+bool list --json
+bool show my-project --json
+bool deploy --json
+```
+
+Output is valid JSON printed to stdout, while progress messages go to stderr.
+
+## Command outputs
+
+### Authentication
+
+#### `bool auth status --json`
+
+```json
+{
+  "apiKey": "bool_abc...xyz",
+  "apiUrl": "https://bool.com/api",
+  "healthy": true
+}
+```
+
+### List Bools
+
+#### `bool list --json`
+
+```json
+[
+  {
+    "name": "My Portfolio",
+    "slug": "abc123",
+    "visibility": "public",
+    "description": "Personal portfolio site",
+    "url": "https://abc123.bool01.com",
+    "created_at": "2024-03-14T09:15:30Z",
+    "updated_at": "2024-03-15T10:23:45Z"
+  },
+  {
+    "name": "Blog",
+    "slug": "def456",
+    "visibility": "private",
+    "description": null,
+    "url": "https://def456.bool01.com",
+    "created_at": "2024-03-10T14:20:15Z",
+    "updated_at": "2024-03-10T14:20:15Z"
+  }
+]
+```
+
+### Show Bool details
+
+#### `bool show my-project --json`
+
+```json
+{
+  "name": "My Portfolio",
+  "slug": "abc123",
+  "visibility": "public",
+  "description": "Personal portfolio site",
+  "url": "https://abc123.bool01.com",
+  "created_at": "2024-03-14T09:15:30Z",
+  "updated_at": "2024-03-15T10:23:45Z",
+  "latest_version": {
+    "version_number": 2,
+    "file_count": 13,
+    "commit_message": "Fixed navigation bug",
+    "created_at": "2024-03-15T10:23:45Z"
+  }
+}
+```
+
+### Create Bool
+
+#### `bool create "New Project" --json`
+
+```json
+{
+  "name": "New Project",
+  "slug": "ghi789",
+  "visibility": "private",
+  "description": null,
+  "url": "https://ghi789.bool01.com",
+  "created_at": "2024-03-16T11:30:00Z",
+  "updated_at": "2024-03-16T11:30:00Z"
+}
+```
+
+### Update Bool
+
+#### `bool update my-project --name "Updated Name" --json`
+
+```json
+{
+  "name": "Updated Name",
+  "slug": "abc123",
+  "visibility": "public",
+  "description": "Personal portfolio site",
+  "url": "https://abc123.bool01.com",
+  "created_at": "2024-03-14T09:15:30Z",
+  "updated_at": "2024-03-16T12:00:00Z"
+}
+```
+
+### Version history
+
+#### `bool versions my-project --json`
+
+```json
+[
+  {
+    "version_number": 2,
+    "file_count": 13,
+    "commit_message": "Fixed navigation bug",
+    "created_at": "2024-03-15T10:23:45Z"
+  },
+  {
+    "version_number": 1,
+    "file_count": 12,
+    "commit_message": "",
+    "created_at": "2024-03-14T09:15:30Z"
+  }
+]
+```
+
+### Deploy
+
+#### `bool deploy --json`
+
+```json
+{
+  "version_number": 3,
+  "file_count": 14,
+  "commit_message": "Added contact form",
+  "created_at": "2024-03-16T13:45:20Z",
+  "name": "My Portfolio"
+}
+```
+
+### Pull files
+
+#### `bool pull my-project --json`
+
+```json
+{
+  "version_number": 2,
+  "files": [
+    {
+      "filename": "index.html",
+      "code": "<!DOCTYPE html>..."
+    },
+    {
+      "filename": "style.css",
+      "code": "body { margin: 0; ..."
+    }
+  ],
+  "name": "My Portfolio"
+}
+```
+
+## Parsing JSON in scripts
+
+### Shell (jq)
+
+Use `jq` to parse JSON in bash scripts:
+
+```bash
+# Get the URL of a Bool
+URL=$(bool show my-project --json | jq -r '.url')
+echo "Deployed to: $URL"
+
+# List all Bool slugs
+bool list --json | jq -r '.[].slug'
+
+# Get the latest version number
+VERSION=$(bool versions my-project --json | jq -r '.[0].version_number')
+echo "Latest version: v$VERSION"
+```
+
+### Python
+
+```python
+import subprocess
+import json
+
+# Get Bool details
+result = subprocess.run(
+    ['bool', 'show', 'my-project', '--json'],
+    capture_output=True,
+    text=True
+)
+data = json.loads(result.stdout)
+print(f"URL: {data['url']}")
+print(f"Latest version: v{data['latest_version']['version_number']}")
+
+# List all Bools
+result = subprocess.run(
+    ['bool', 'list', '--json'],
+    capture_output=True,
+    text=True
+)
+bools = json.loads(result.stdout)
+for b in bools:
+    print(f"{b['name']} ({b['slug']}): {b['url']}")
+```
+
+### Node.js
+
+```javascript
+const { execSync } = require('child_process');
+
+// Get Bool details
+const output = execSync('bool show my-project --json', { encoding: 'utf-8' });
+const data = JSON.parse(output);
+console.log(`URL: ${data.url}`);
+console.log(`Latest version: v${data.latest_version.version_number}`);
+
+// Deploy and get the version number
+const deployOutput = execSync('bool deploy --json', { encoding: 'utf-8' });
+const deployData = JSON.parse(deployOutput);
+console.log(`Deployed version ${deployData.version_number} with ${deployData.file_count} files`);
+```
+
+## CI/CD examples
+
+### GitHub Actions
+
+```yaml
+name: Deploy to Bool
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Bool CLI
+        run: npm install -g bool-cli
+      
+      - name: Deploy
+        env:
+          BOOL_API_KEY: ${{ secrets.BOOL_API_KEY }}
+        run: |
+          OUTPUT=$(bool deploy my-project-slug --json)
+          echo "$OUTPUT"
+          VERSION=$(echo "$OUTPUT" | jq -r '.version_number')
+          echo "Deployed version: v$VERSION"
+          echo "::notice::Deployed version v$VERSION to Bool"
+```
+
+### GitLab CI
+
+```yaml
+deploy:
+  image: node:18
+  script:
+    - npm install -g bool-cli
+    - OUTPUT=$(bool deploy my-project-slug --json)
+    - echo "$OUTPUT"
+    - VERSION=$(echo "$OUTPUT" | jq -r '.version_number')
+    - echo "Deployed version v$VERSION"
+  variables:
+    BOOL_API_KEY: $BOOL_API_KEY
+  only:
+    - main
+```
+
+### CircleCI
+
+```yaml
+version: 2.1
+jobs:
+  deploy:
+    docker:
+      - image: cimg/node:18.0
+    steps:
+      - checkout
+      - run:
+          name: Install Bool CLI
+          command: npm install -g bool-cli
+      - run:
+          name: Deploy
+          command: |
+            OUTPUT=$(bool deploy my-project-slug --json)
+            echo "$OUTPUT"
+            VERSION=$(echo "$OUTPUT" | jq -r '.version_number')
+            echo "Deployed version v$VERSION"
+workflows:
+  deploy:
+    jobs:
+      - deploy:
+          filters:
+            branches:
+              only: main
+```
+
+## Error handling
+
+When a command fails, Bool CLI:
+1. Exits with a non-zero status code
+2. Prints an error message to stderr (even in `--json` mode)
+3. Does NOT print JSON to stdout on error
+
+Handle errors in scripts:
+
+### Bash
+
+```bash
+if OUTPUT=$(bool deploy --json 2>&1); then
+    echo "Success: $OUTPUT"
+    VERSION=$(echo "$OUTPUT" | jq -r '.version_number')
+    echo "Deployed v$VERSION"
+else
+    echo "Deploy failed"
+    exit 1
+fi
+```
+
+### Python
+
+```python
+import subprocess
+import json
+
+try:
+    result = subprocess.run(
+        ['bool', 'deploy', '--json'],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    data = json.loads(result.stdout)
+    print(f"Deployed version {data['version_number']}")
+except subprocess.CalledProcessError as e:
+    print(f"Deploy failed: {e.stderr}")
+    exit(1)
+```
+
+## Combining flags
+
+The `--json` flag works with other flags:
+
+```bash
+# List with custom limit
+bool list --limit 50 --json
+
+# Deploy with message
+bool deploy -m "Release v2.0" --json
+
+# Pull specific version
+bool pull my-project --version 3 --json
+
+# Update with multiple fields
+bool update my-project --name "New Name" --visibility public --json
+```
+
+## Tips for automation
+
+<Tip>
+**Always use `--json` in scripts** to get consistent, parseable output instead of human-readable tables.
+</Tip>
+
+<Tip>
+**Check exit codes** to detect failures. Bool CLI exits with non-zero status on errors.
+</Tip>
+
+<Tip>
+**Parse stderr separately** from stdout. Progress messages and errors go to stderr, while JSON goes to stdout.
+</Tip>
+
+<Tip>
+**Store slugs in CI/CD variables** instead of hardcoding them in scripts. This makes it easier to update or test with different Bools.
+</Tip>
+
+<CardGroup cols={2}>
+  <Card title="Deployment Guide" icon="upload" href="/guides/deployment">
+    Learn about CI/CD deployment workflows
+  </Card>
+  <Card title="Commands Overview" icon="terminal" href="/commands/overview">
+    View all available commands
+  </Card>
+  <Card title="Environment Variables" icon="code" href="/reference/environment-variables">
+    Configure Bool CLI with env vars
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/reference/troubleshooting">
+    Debug common issues
+  </Card>
+</CardGroup>
